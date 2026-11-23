@@ -1,0 +1,48 @@
+<?php
+require '../config/db.php';
+require '../includes/auth_check.php';
+require_role(['Landlord', 'Caretaker']);
+
+$sql = "SELECT p.payment_id, p.amount, p.payment_date, p.payment_method, p.reference,
+               p.receipt_number, p.created_on,
+               tu.first_name AS t_first, tu.last_name AS t_last,
+               un.unit_number,
+               rb.first_name AS r_first, rb.last_name AS r_last
+        FROM payment p
+        JOIN tenancies t ON t.tenancy_id = p.tenancy_id
+        JOIN users tu ON tu.user_id = t.tenant_id
+        JOIN units un ON un.unit_id = t.unit_id
+        JOIN users rb ON rb.user_id = p.recorded_by
+        ORDER BY p.payment_date DESC, p.payment_id DESC
+        LIMIT 100";
+$payments = $pdo->query($sql)->fetchAll();
+
+include '../includes/header.php';
+?>
+<h2>Payments</h2>
+<?php if (isset($_GET['saved'])): ?>
+    <p class="msg-success">Payment recorded. Receipt <?php echo htmlspecialchars($_GET['saved']); ?>.</p>
+<?php endif; ?>
+<p><a class="btn" href="/smart_rent/landlord/payment_form.php">+ Record payment</a></p>
+
+<div class="table-wrap">
+<table>
+    <tr>
+        <th>Receipt</th><th>Date</th><th>Tenant</th><th>Unit</th><th>Amount</th>
+        <th>Method</th><th>Reference</th><th>Recorded by</th>
+    </tr>
+    <?php foreach ($payments as $p): ?>
+    <tr>
+        <td><?php echo htmlspecialchars($p['receipt_number']); ?></td>
+        <td><?php echo htmlspecialchars($p['payment_date']); ?></td>
+        <td><?php echo htmlspecialchars($p['t_first'] . ' ' . $p['t_last']); ?></td>
+        <td><?php echo htmlspecialchars($p['unit_number']); ?></td>
+        <td><?php echo number_format($p['amount'], 2); ?></td>
+        <td><?php echo htmlspecialchars($p['payment_method']); ?></td>
+        <td><?php echo htmlspecialchars($p['reference'] ?? '-'); ?></td>
+        <td><?php echo htmlspecialchars($p['r_first'] . ' ' . $p['r_last']); ?></td>
+    </tr>
+    <?php endforeach; ?>
+</table>
+</div>
+<?php include '../includes/footer.php'; ?>
